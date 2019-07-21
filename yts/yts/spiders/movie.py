@@ -28,6 +28,9 @@ class MovieSpider(Spider):
                     callback=self.get_hamepage)
     
     def get_movie_data(self, response):
+        def remove_comma(name):
+            return str(name).replace(',','_')
+
         movie_name = response.xpath('//div[@id="movie-info"]/div[@class="hidden-xs"]/h1[1]/text()').get()
         movie_year = response.xpath('//div[@id="movie-info"]/div[@class="hidden-xs"]/h2[1]/text()').get()
         movie_genre = response.xpath('//div[@id="movie-info"]/div[@class="hidden-xs"]/h2[2]/text()').get()
@@ -39,5 +42,6 @@ class MovieSpider(Spider):
 
         with open('movies.csv','a') as csvfile:
             datawriter = csv.writer(csvfile,quotechar=',')
-            datawriter.writerow([movie_name,movie_year,movie_genre,imdb_link,
+            datawriter.writerow([remove_comma(movie_name),remove_comma(movie_year),
+                                remove_comma(movie_genre),imdb_link,
                                 download720_link,download1080_link])
