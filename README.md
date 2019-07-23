@@ -1,2 +1,2 @@
 # yts-movies
-list of movies with details &amp; T* download link from T* site "yts".
+list of movies with details &amp; Torrent download link from Torrent site "yts".
