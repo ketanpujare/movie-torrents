@@ -14,34 +14,39 @@ class MovieSpider(Spider):
     url = 'https://yts.lt'
 
     def remove_comma(self,name):
-        return str(name).replace(',','_')
+        return str(name).strip().replace(',','_')
 
-    #csv header
-    with open('movies.csv','a') as csvfile:
-            datawriter = csv.writer(csvfile,quotechar=',')
-            datawriter.writerow(['Movie Name','Movie Year','Movie Genre',
-                    'IMDB Link','720p Download Link','1080p Download Link'])
+    # #csv header
+    # with open('movies.csv','a') as csvfile:
+    #         datawriter = csv.writer(csvfile,quotechar=',')
+    #         datawriter.writerow(['Movie Name','Movie Year','Movie Genre',
+    #                 'IMDB Link','720p Download Link','1080p Download Link'])
 
     def start_requests(self):
         yield Request('{}/browse-movies'.format(self.url),
+                dont_filter=True,
                 callback=self.get_hamepage)
 
     def get_hamepage(self, response):
+        token = dict()
+        if "ddos_token" in response.meta:
+            token.update(response.meta['ddos_token'])
         movie_page_links = response.xpath(
             '//div[@class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4"]/a[1]/@href').getall()
         movie_names = response.xpath(
             '//div[@class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4"]/div/a[1]/text()').getall()
         for movie_name, movie_page in zip(movie_names, movie_page_links):
-            
             # if movie not present in database than send request for movie page
-            if not movies.find_one({'name':self.remove_comma(str(movie_name.strip()))}):
+            if not movies.find_one({'name':self.remove_comma(movie_name)}):        
                 yield Request(movie_page,
+                        cookies=token,
                         callback=self.get_movie_data)
         
         # check if new downloads appear in front page only ## to avoid unnecessary requests
         next_page = response.xpath('//li[@class="pagination-bordered"]/following-sibling::li/a/@href').get()
         if next_page:
             yield Request('{}{}'.format(self.url,next_page.strip()),
+                    cookies=token,
                     callback=self.get_hamepage)
     
     def get_movie_data(self, response):
@@ -54,9 +59,10 @@ class MovieSpider(Spider):
         download1080_link = response.xpath(
             '//div[@class="bottom-info"]/p[@class="hidden-md hidden-lg"]/a[contains(.,"1080p")]/@href').get()
 
+
         # NOSQL dict
         movie_data = dict()
-        movie_data['name'] = self.remove_comma(str(movie_name.strip()))
+        movie_data['name'] = self.remove_comma(movie_name)
         movie_data['year'] = movie_year.strip()
         movie_data['genre'] = list(i.strip() for i in movie_genre.split('/'))
         movie_data['imdb_link'] = imdb_link
@@ -69,6 +75,6 @@ class MovieSpider(Spider):
         # # csv
         # with open('movies.csv','a') as csvfile:
         #     datawriter = csv.writer(csvfile,quotechar=',')
-        #     datawriter.writerow([remove_comma(movie_name),remove_comma(movie_year),
-        #                         remove_comma(movie_genre),imdb_link,
+        #     datawriter.writerow([self.remove_comma(movie_name),movie_year.strip(),
+        #                         self.remove_comma(movie_genre),imdb_link,
         #                         download720_link,download1080_link])

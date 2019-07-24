@@ -5,7 +5,9 @@
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
-from scrapy import signals
+from scrapy             import signals,Request
+from scrapy.exceptions  import IgnoreRequest
+from cfscrape           import get_tokens
 
 
 class YtsSpiderMiddleware(object):
@@ -69,24 +71,18 @@ class YtsDownloaderMiddleware(object):
         return s
 
     def process_request(self, request, spider):
-        # Called for each request that goes through the downloader
-        # middleware.
-
-        # Must either:
-        # - return None: continue processing this request
-        # - or return a Response object
-        # - or return a Request object
-        # - or raise IgnoreRequest: process_exception() methods of
-        #   installed downloader middleware will be called
         return None
 
     def process_response(self, request, response, spider):
-        # Called with the response returned from the downloader.
-
-        # Must either;
-        # - return a Response object
-        # - return a Request object
-        # - or raise IgnoreRequest
+        if response.status == 503:
+            try:
+                token,user_agent = get_tokens(request.url,user_agent=request.headers['user-agent'])
+            except Exception:
+                raise IgnoreRequest
+            return Request(url=request.url,cookies=token, dont_filter=True,
+                            headers={'user-agent':user_agent}, 
+                            meta={'ddos_token':token},
+                            callback=request.callback)
         return response
 
     def process_exception(self, request, exception, spider):
