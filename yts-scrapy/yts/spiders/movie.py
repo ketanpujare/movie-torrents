@@ -32,9 +32,9 @@ class MovieSpider(Spider):
         if "ddos_token" in response.meta:
             token.update(response.meta['ddos_token'])
         movie_page_links = response.xpath(
-            '//div[@class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4"]/a[1]/@href').getall()
+            '*//div[@class="browse-movie-wrap col-xs-10 col-sm-5"]/div/a[1]/@href').getall()
         movie_names = response.xpath(
-            '//div[@class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4"]/div/a[1]/text()').getall()
+            '*//div[@class="browse-movie-wrap col-xs-10 col-sm-5"]/div/a[1]/text()').getall()
         for movie_name, movie_page in zip(movie_names, movie_page_links):
             # if movie not present in database than send request for movie page
             if not movies.find_one({'name':self.remove_comma(movie_name)}):        
