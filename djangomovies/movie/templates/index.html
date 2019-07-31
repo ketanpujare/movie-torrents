@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="row-8">
+        {% for movie in object_list %}
+        <div class="col-12">
+        {{ movie.movie_name }}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
