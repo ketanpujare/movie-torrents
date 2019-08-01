@@ -1,12 +1,23 @@
-{% extends 'base.html' %}
+{% extends 'layout.html' %}
+{% load static %}
 {% block content %}
-<div class="container">
-    <div class="row-8">
-        {% for movie in object_list %}
-        <div class="col-12">
-        {{ movie.movie_name }}
+<div class="col-9 my-3 order-5">
+    <div class="container-fluid pr-5">
+        <div class="row">
+            {% for one_movie in object_list %}
+            <div class="col-3 col-md-3 my-3 px-3">
+                {% with "movie/"|add:one_movie.human_readable_name|add:"/"|add:one_movie.human_readable_name|add:".jpg" as image_static %}
+                <img src="{% static image_static %}" class="img-fluid rounded">
+                {% endwith %}
+                <div class="col mt-3">
+                    {{ one_movie.movie_name }}
+                </div> 
+                <div class="col">
+                    {{ one_movie.movie_year }}
+                </div>     
+            </div>  
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
 </div>
 {% endblock content %}

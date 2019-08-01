@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block basecontent %}
+<div class="container-fluid">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-3 my-3 order-1">
+                <div class="input-group">
+                        <select class="custom-select" id="inputGroupSelect04" aria-label="Example select with button addon">
+                            <option selected>Choose Genre</option>
+                            {% for genre in genres%}
+                            <option value="{{genre.pk}}">{{genre.genre}}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" type="button">Button</button>
+                        </div>
+                </div>
+            </div>
+{% block content %}
+
+{% endblock %}
+        </div>
+    </div>
+</div>
+
+{% endblock basecontent %}

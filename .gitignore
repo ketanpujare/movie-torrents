@@ -106,4 +106,4 @@ venv.bak/
 #Extra
 .vscode/
 movies/
-movies_data/
+movie/static/movie/
