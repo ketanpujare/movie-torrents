@@ -15,9 +15,6 @@ class Movie(models.Model):
     def __str__(self):
         return '{} {}'.format(self.movie_name, self.movie_year)
 
-    def human_readable_name(self):
-        return self.movie_name.replace(' ', '_')
-
 class Actor(models.Model):
     actor_name = models.CharField(max_length=100, blank=False, null=False)
     movies = models.ManyToManyField(Movie)

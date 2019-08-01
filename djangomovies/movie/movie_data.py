@@ -1,8 +1,13 @@
 from requests   import session, get
 from lxml.html  import fromstring
+from pymongo    import MongoClient
 from os.path    import exists
 from os         import makedirs
 
+
+client = MongoClient('mongodb://localhost',27017)
+db = client['movie-db']
+db_conn = db.movie_collection
 
 class MoviesData:
     def __init__(self,domain,download=False):
@@ -11,7 +16,7 @@ class MoviesData:
 
     def download_content(self,link,movie_name,extension,is1080=False):
         
-        base_location = 'movie/static/movie'
+        base_location = 'movies_data'
         def _remove_spaces(name):
             return name.replace(' ','_')
         
@@ -107,10 +112,14 @@ class MoviesData:
 
         for movie_name, movie_link in zip(movie_names, movie_links):
             if 'yts' in movie_link:
-                yield self.get_movie_page(movie_link,sess)
+                if not db_conn.find_one({'yts.movie_name':movie_name}):
+                    print(movie_name)
+                    yield self.get_movie_page(movie_link,sess)
 
         next_page = tree.xpath(
             '//li[@class="pagination-bordered"]/following-sibling::li/a/@href'
         )
         # if next_page:
         #     self.get_page(next_page[0])
+
+client.close()
