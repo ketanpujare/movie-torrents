@@ -6,11 +6,15 @@
         <div class="row">
             {% for one_movie in object_list %}
             <div class="col-3 col-md-3 my-3 px-3">
-                {% with "movie/"|add:one_movie.human_readable_name|add:"/"|add:one_movie.human_readable_name|add:".jpg" as image_static %}
-                <img src="{% static image_static %}" class="img-fluid rounded">
-                {% endwith %}
+                <a href="/detail/{{ one_movie.id }}/">
+                    {% with "movie/"|add:one_movie.human_readable_name|add:"/"|add:one_movie.human_readable_name|add:".jpg" as image_static %}
+                    <img src="{% static image_static %}" class="img-fluid rounded">
+                    {% endwith %}
+                </a>
                 <div class="col mt-3">
-                    {{ one_movie.movie_name }}
+                    <a href="/detail/{{ one_movie.id }}/">                
+                        {{ one_movie.movie_name }}
+                    </a>
                 </div> 
                 <div class="col">
                     {{ one_movie.movie_year }}
@@ -19,5 +23,21 @@
             {% endfor %}
         </div>
     </div>
+    {% if is_paginated %}
+        <div class="pagination">
+            <span class="page-links">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                {% endif %}
+                <span class="page-current">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                </span>
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}">next</a>
+                {% endif %}
+            </span>
+        </div>
+    {% endif %}
+
 </div>
 {% endblock content %}

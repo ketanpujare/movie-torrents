@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block basecontent %}
+{% with "movie/"|add:object.human_readable_name|add:"/"|add:object.human_readable_name|add:".jpg" as image_static %}
+<img src="{% static image_static %}" class="img-fluid rounded">
+{% endwith %}
+{{ object.movie_name }}
+<br>
+<a href="{{ object.down720_link }}">720px Link</a>
+<br>
+
+<a href="{{ object.down1080_link }}">1080px Link</a>
+
+{% endblock basecontent%}

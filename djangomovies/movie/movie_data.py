@@ -2,6 +2,7 @@ from requests   import session, get
 from lxml.html  import fromstring
 from os.path    import exists
 from os         import makedirs
+from .models    import Movie
 
 
 class MoviesData:
@@ -105,12 +106,15 @@ class MoviesData:
             '*//div[@class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4"]/div/a[1]/text()'
         )
 
-        for movie_name, movie_link in zip(movie_names, movie_links):
-            if 'yts' in movie_link:
-                yield self.get_movie_page(movie_link,sess)
+        # next_page = tree.xpath(
+        #     '//li[@class="pagination-bordered"]/following-sibling::li/a/@href'
+        # )
 
-        next_page = tree.xpath(
-            '//li[@class="pagination-bordered"]/following-sibling::li/a/@href'
-        )
         # if next_page:
         #     self.get_page(next_page[0])
+
+        for movie_name, movie_link in zip(movie_names, movie_links):
+            if 'yts' in movie_link:
+                print(movie_name)
+                if not Movie.objects.filter(movie_name=movie_name):
+                    yield self.get_movie_page(movie_link,sess)
