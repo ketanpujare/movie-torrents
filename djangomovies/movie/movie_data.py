@@ -1,8 +1,10 @@
-from requests   import session, get
-from lxml.html  import fromstring
-from os.path    import exists
-from os         import makedirs
-from .models    import Movie
+from requests           import session, get
+from lxml.html          import fromstring
+from os.path            import exists
+from os                 import makedirs
+from .models            import Movie
+from .utils             import store_movie_data
+from concurrent.futures import ThreadPoolExecutor
 
 
 class MoviesData:
@@ -14,7 +16,8 @@ class MoviesData:
         
         base_location = 'movie/static/movie'
         def _remove_spaces(name):
-            return name.replace(' ','_')
+            if name:
+                return name.replace(' ','_')
         
         def _create_directory(pathname):
             if not exists(pathname):
@@ -24,14 +27,16 @@ class MoviesData:
             movie_name = _remove_spaces(movie_name)
             if link:
                 img = get(link)
-            _create_directory('{}/{}'.format(base_location, movie_name))
-            if not is1080:
-                with open('{}/{}/{}.{}'.format(base_location, movie_name, movie_name,extension),'wb') as f:
-                    f.write(img.content)
-            else:
-                with open('{}/{}/{}_1080.{}'.format(base_location, movie_name,movie_name,extension),'wb') as f:
-                    f.write(img.content)
-
+            if img.status_code==200:
+                _create_directory('{}/{}'.format(base_location, movie_name))
+                if not is1080:
+                    with open('{}/{}/{}.{}'.format(base_location, movie_name, movie_name,extension),'wb') as f:
+                        f.write(img.content)
+                else:
+                    with open('{}/{}/{}_1080.{}'.format(base_location, movie_name,movie_name,extension),'wb') as f:
+                        f.write(img.content)
+                return True
+            return False
         else:
             print('Download Not Set')
 
@@ -66,28 +71,25 @@ class MoviesData:
             actors = tree.xpath('//div[@class="actors"]/div/div[2]/a/span/span/text()')
             synopsis = tree.xpath('//div[@id="synopsis"]/p[@class="hidden-xs"]/text()')
             
-            
+            movie_image = tree.xpath('//div[@id="movie-poster"]/img/@src')
+            bool_image  = self.download_content(_check_empty(movie_image,0),_check_empty(movie_name,0),'jpg')
+            bool_720    = self.download_content(_check_empty(down720_link,0),_check_empty(movie_name,0),'torrent')
+            bool_1080   = self.download_content(_check_empty(down1080_link,0),_check_empty(movie_name,0),'torrent',True)
 
             movie_data = {
                 'movie_name'    : _check_empty(movie_name,0),
                 'movie_year'    : _check_empty(movie_year,0),
                 'movie_genre'   : _get_genre(movie_genre),
                 'imdb_link'     : _check_empty(imdb_link,0),
-                'down720_link'  : _check_empty(down720_link,0),
-                'down1080_link' : _check_empty(down1080_link,0),
+                'down720_link'  : _check_empty(down720_link,0) if bool_720 else None,
+                'down1080_link' : _check_empty(down1080_link,0) if bool_1080 else None,
                 'directors'     : directors,
                 'actors'        : actors,
-                'synopsis'      : _check_empty(synopsis,0)
+                'synopsis'      : _check_empty(synopsis,0),
+                'image'         : bool_image
             }
 
-            # db_conn.insert_one(movie_data)
-
-            movie_image = tree.xpath('//div[@id="movie-poster"]/img/@src')
-            self.download_content(_check_empty(movie_image,0),_check_empty(movie_name,0),'jpg')
-            self.download_content(_check_empty(down720_link,0),_check_empty(movie_name,0),'torrent')
-            self.download_content(_check_empty(down1080_link,0),_check_empty(movie_name,0),'torrent',True)
-
-            return movie_data
+            store_movie_data(movie_data)
 
         else:
             print("=================",link)
@@ -106,15 +108,27 @@ class MoviesData:
             '*//div[@class="browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4"]/div/a[1]/text()'
         )
 
-        # next_page = tree.xpath(
-        #     '//li[@class="pagination-bordered"]/following-sibling::li/a/@href'
-        # )
+        next_page = tree.xpath(
+            '//li[@class="pagination-bordered"]/following-sibling::li/a/@href'
+        )
 
-        # if next_page:
-        #     self.get_page(next_page[0])
+        for movie_name in movie_names:
+            if not Movie.objects.filter(movie_name=movie_name):            
+                if next_page:
+                    print(next_page[0])
+                    self.get_page(next_page[0])
+                    break
 
-        for movie_name, movie_link in zip(movie_names, movie_links):
-            if 'yts' in movie_link:
-                print(movie_name)
-                if not Movie.objects.filter(movie_name=movie_name):
-                    yield self.get_movie_page(movie_link,sess)
+        with ThreadPoolExecutor(max_workers=len(movie_names)) as executor:
+            for movie_name, movie_link in zip(movie_names, movie_links):
+                if 'yts' in movie_link:
+                    print("---------->",movie_name)
+                    if not Movie.objects.filter(movie_name=movie_name):
+                        executor.submit(self.get_movie_page, movie_link, sess)
+
+
+def start_data():
+    domain = 'https://yts.lt'
+    image_download = True
+    class_obj = MoviesData(domain,image_download)
+    class_obj.get_page('/browse-movies')
