@@ -1,23 +1,23 @@
-from requests           import session, get
+from requests           import session
 from lxml.html          import fromstring
 from os.path            import exists
 from os                 import makedirs
 from .models            import Movie
 from .utils             import store_movie_data
-from concurrent.futures import ThreadPoolExecutor
-
+from cfscrape           import create_scraper
+from re                 import sub
 
 class MoviesData:
     def __init__(self,domain,download=False):
         self.domain = domain
         self.download = download
 
-    def download_content(self,link,movie_name,extension,is1080=False):
+    def download_content(self,link,movie_name,extension,sess,is1080=False):
         
         base_location = 'movie/static/movie'
         def _remove_spaces(name):
             if name:
-                return name.replace(' ','_')
+                return sub('[/ ]+', '_', name)
         
         def _create_directory(pathname):
             if not exists(pathname):
@@ -26,7 +26,7 @@ class MoviesData:
         if self.download:
             movie_name = _remove_spaces(movie_name)
             if link:
-                img = get(link)
+                img = sess.get(link)
             if img.status_code==200:
                 _create_directory('{}/{}'.format(base_location, movie_name))
                 if not is1080:
@@ -72,9 +72,9 @@ class MoviesData:
             synopsis = tree.xpath('//div[@id="synopsis"]/p[@class="hidden-xs"]/text()')
             
             movie_image = tree.xpath('//div[@id="movie-poster"]/img/@src')
-            bool_image  = self.download_content(_check_empty(movie_image,0),_check_empty(movie_name,0),'jpg')
-            bool_720    = self.download_content(_check_empty(down720_link,0),_check_empty(movie_name,0),'torrent')
-            bool_1080   = self.download_content(_check_empty(down1080_link,0),_check_empty(movie_name,0),'torrent',True)
+            bool_image  = self.download_content(_check_empty(movie_image,0),_check_empty(movie_name,0),'jpg',sess)
+            bool_720    = self.download_content(_check_empty(down720_link,0),_check_empty(movie_name,0),'torrent',sess)
+            bool_1080   = self.download_content(_check_empty(down1080_link,0),_check_empty(movie_name,0),'torrent',sess,True)
 
             movie_data = {
                 'movie_name'    : _check_empty(movie_name,0),
@@ -93,12 +93,17 @@ class MoviesData:
 
         else:
             print("=================",link)
+            with open('miss_movie.txt','a') as f:
+                f.write("{}\n".format(link))
 
 
 
     def get_page(self,linkextra):
         sess = session()
-        page = sess.get('{}{}'.format(self.domain,linkextra))
+
+        scrape = create_scraper(sess=sess)      # bypass DDoS attack protection
+
+        page = scrape.get('{}{}'.format(self.domain,linkextra))
         tree = fromstring(page.content)
 
         movie_links = tree.xpath(
@@ -113,18 +118,22 @@ class MoviesData:
         )
 
         for movie_name in movie_names:
-            if not Movie.objects.filter(movie_name=movie_name):            
+            if not Movie.objects.filter(movie_name=movie_name): 
                 if next_page:
                     print(next_page[0])
                     self.get_page(next_page[0])
                     break
 
-        with ThreadPoolExecutor(max_workers=len(movie_names)) as executor:
-            for movie_name, movie_link in zip(movie_names, movie_links):
-                if 'yts' in movie_link:
-                    print("---------->",movie_name)
-                    if not Movie.objects.filter(movie_name=movie_name):
-                        executor.submit(self.get_movie_page, movie_link, sess)
+        for movie_name, movie_link in zip(movie_names, movie_links):
+            if 'yts' in movie_link:
+                print("---------->",movie_name)
+                if not Movie.objects.filter(movie_name=movie_name):
+                    self.get_movie_page(movie_link, scrape)
+
+        # if next_page:
+        #     print(next_page[0])
+        #     self.get_page(next_page[0])
+
 
 
 def start_data():

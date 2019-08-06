@@ -1,4 +1,5 @@
-from django.db import models
+from django.db  import models
+from re         import sub
 
 # Create your models here.
 
@@ -16,7 +17,7 @@ class Movie(models.Model):
         return '{} {}'.format(self.movie_name, self.movie_year)
 
     def human_readable_name(self):
-        return self.movie_name.replace(' ', '_')
+        return sub('[/ ]+', '_', self.movie_name)
 
 class Actor(models.Model):
     actor_name = models.CharField(max_length=100, blank=False, null=False)

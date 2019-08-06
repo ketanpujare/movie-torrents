@@ -107,3 +107,4 @@ venv.bak/
 .vscode/
 movies/
 djangomovies/movie/static/movie/
+djangomovies/miss_movie.txt
